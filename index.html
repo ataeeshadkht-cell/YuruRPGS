@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AURORIA 3D - Imperial Edition</title>
+    <!-- لود موتور گرافیکی سه‌بعدی Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body, html { width: 100%; height: 100%; background: #030408; color: #fff; overflow: hidden; }
+
+        /* اخطار چرخش گوشی به حالت افقی */
+        #rotate-warning {
+            position: fixed; inset: 0; background: #05050a; z-index: 99999;
+            display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .phone-anim {
+            width: 50px; height: 95px; border: 3px solid #f59e0b; border-radius: 10px;
+            margin-bottom: 20px; animation: rot 2s infinite ease-in-out;
+        }
+        @keyframes rot { 0%, 20% { transform: rotate(0deg); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+        @media screen and (orientation: portrait) { #rotate-warning { display: flex !important; } }
+
+        /* صفحه لودینگ و آپدیت سینمایی */
+        #boot-screen {
+            position: fixed; inset: 0; background: radial-gradient(circle at center, #111625 0%, #030408 100%);
+            z-index: 9000; display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.8s ease;
+        }
+        .top-line { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: #f59e0b; box-shadow: 0 0 15px #f59e0b; transition: width 0.2s; }
+        .game-logo { font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #f59e0b; text-shadow: 0 0 25px rgba(245, 158, 11, 0.6); margin-bottom: 25px; }
+        .bar-wrap { width: 340px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
+        .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b, #fef08a); transition: width 0.2s; }
+        .boot-msg { margin-top: 12px; font-size: 12px; color: #94a3b8; letter-spacing: 1px; }
+
+        /* ویدیوی انتقال تله‌پورت */
+        #teleport-scene {
+            position: fixed; inset: 0; background: #000; z-index: 8000; display: none;
+            justify-content: center; align-items: center;
+        }
+        #teleport-video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* بوم سه‌بعدی تمام صفحه */
+        #canvas-3d { position: fixed; inset: 0; z-index: 1; }
+
+        /* رابط کاربری لابی روی صحنه سه‌بعدی (HUD) */
+        #lobby-hud {
+            position: fixed; inset: 0; z-index: 10; display: none; pointer-events: none;
+            padding: 15px 25px; flex-direction: column; justify-content: space-between;
+        }
+        .interactive { pointer-events: auto; }
+
+        /* نوار بالا شبیه بازی‌های بزرگ */
+        .hud-top { display: flex; justify-content: space-between; align-items: center; }
+        .profile-box {
+            display: flex; align-items: center; gap: 12px;
+            background: linear-gradient(90deg, rgba(15,23,42,0.85), rgba(15,23,42,0.3));
+            border-right: 3px solid #f59e0b; padding: 6px 18px; border-radius: 4px; backdrop-filter: blur(8px);
+        }
+        .avatar-circle { width: 38px; height: 38px; border-radius: 50%; background: #f59e0b; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; font-size: 16px; }
+        .currency-bar { display: flex; gap: 15px; }
+        .curr-item {
+            background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(245, 158, 11, 0.3);
+            padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #fef08a;
+            display: flex; align-items: center; gap: 6px; backdrop-filter: blur(6px);
+        }
+
+        /* پنل شخصی‌سازی شیشه‌ای سمت راست */
+        .hud-middle { display: flex; justify-content: space-between; align-items: center; flex: 1; }
+        .custom-panel {
+            width: 240px; background: rgba(10, 15, 28, 0.75); border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 12px; padding: 12px; backdrop-filter: blur(12px);
+            display: flex; flex-direction: column; gap: 12px;
+        }
+        .cat-title { font-size: 11px; color: #f59e0b; font-weight: bold; margin-bottom: 5px; }
+        .swatch-row { display: flex; gap: 8px; }
+        .swatch-btn {
+            width: 34px; height: 34px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2);
+            cursor: pointer; transition: 0.2s;
+        }
+        .swatch-btn.active { border-color: #f59e0b; transform: scale(1.1); box-shadow: 0 0 12px rgba(245,158,11,0.6); }
+
+        /* نوار پایین (جوایز و دکمه ورود) */
+        .hud-bottom { display: flex; justify-content: space-between; align-items: flex-end; }
+        .crate-card {
+            background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9));
+            border: 1px solid #f59e0b; padding: 10px 20px; border-radius: 10px;
+            display: flex; align-items: center; gap: 10px; cursor: pointer;
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); transition: 0.2s;
+        }
+        .crate-card:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(245, 158, 11, 0.6); }
+
+        .play-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;
+            border: none; padding: 14px 48px; font-size: 18px; font-weight: 900; letter-spacing: 2px;
+            border-radius: 6px; cursor: pointer; box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
+            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); transition: 0.2s;
+        }
+        .play-btn:active { transform: scale(0.95); }
+
+        /* پنجره جایزه */
+        #modal-reward {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100;
+            display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px);
+        }
+        .modal-box {
+            background: linear-gradient(180deg, #1e293b, #0f172a); border: 2px solid #f59e0b;
+            padding: 30px 40px; border-radius: 16px; text-align: center; max-width: 360px;
+            box-shadow: 0 0 50px rgba(245, 158, 11, 0.5);
+        }
+    </style>
+</head>
+<body onclick="goFullscreen()">
+
+    <div id="rotate-warning">
+        <div class="phone-anim"></div>
+        <h3 style="color: #f59e0b;">گوشی را افقی بچرخانید</h3>
+    </div>
+
+    <!-- مرحله ۱: بوت و آپدیت -->
+    <div id="boot-screen">
+        <div class="top-line" id="top-line"></div>
+        <div class="game-logo">AURORIA</div>
+        <div class="bar-wrap"><div class="bar-fill" id="bar-fill"></div></div>
+        <div class="boot-msg" id="boot-msg">در حال بارگذاری موتور سه‌بعدی...</div>
+    </div>
+
+    <!-- مرحله ۲: ویدیو تله‌پورت -->
+    <div id="teleport-scene">
+        <video id="teleport-video" playsinline muted>
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-star-field-in-space-4396-large.mp4" type="video/mp4">
+        </video>
+    </div>
+
+    <!-- صحنه گرافیکی سه‌بعدی -->
+    <div id="canvas-3d"></div>
+
+    <!-- رابط کاربری لابی -->
+    <div id="lobby-hud">
+        <div class="hud-top">
+            <div class="profile-box interactive">
+                <div class="avatar-circle">Y</div>
+                <div>
+                    <div style="font-size: 14px; font-weight: bold;">Yuyu</div>
+                    <div style="font-size: 10px; color: #f59e0b;">LV. 1 • قلمرو امپراتوری</div>
+                </div>
+            </div>
+            <div class="currency-bar interactive">
+                <div class="curr-item">🪙 <span id="gold-count">12,500</span></div>
+                <div class="curr-item">💎 <span id="gem-count">450</span></div>
+            </div>
+        </div>
+
+        <div class="hud-middle">
+            <!-- پنل تغییر رنگ سه‌بعدی کاراکتر -->
+            <div class="custom-panel interactive">
+                <div>
+                    <div class="cat-title">رنگ لنز چشم</div>
+                    <div class="swatch-row" id="eye-swatches"></div>
+                </div>
+                <div>
+                    <div class="cat-title">رنگ مو</div>
+                    <div class="swatch-row" id="hair-swatches"></div>
+                </div>
+                <div>
+                    <div class="cat-title">زره و پوشش سلطنتی</div>
+                    <div class="swatch-row" id="armor-swatches"></div>
+                </div>
+                <div style="font-size: 10px; color: #94a3b8; text-align: center; margin-top: 4px;">
+                    برای چرخاندن کاراکتر، صفحه را بکشید
+                </div>
+            </div>
+            <div></div>
+        </div>
+
+        <div class="hud-bottom">
+            <div class="crate-card interactive" onclick="openReward()">
+                <span style="font-size: 24px;">🎁</span>
+                <div>
+                    <div style="font-size: 12px; font-weight: bold; color: #f59e0b;">صندوق گنج سلطنتی</div>
+                    <div style="font-size: 10px; color: #cbd5e1;">دریافت هدیه روزانه</div>
+                </div>
+            </div>
+
+            <button class="play-btn interactive" onclick="alert('در حال آماده‌سازی نقشه نبرد با شیاطین...')">START</button>
+        </div>
+    </div>
+
+    <!-- پنجره دریافت جایزه -->
+    <div id="modal-reward" onclick="closeReward()">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <div style="font-size: 48px; margin-bottom: 10px;">👑</div>
+            <h3 style="color: #f59e0b; margin-bottom: 8px;">پاداش امپراتوری!</h3>
+            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px;">۵۰۰ سکه طلا و زره درخشان به حساب شما اضافه شد.</p>
+            <button onclick="closeReward()" style="background: #f59e0b; border: none; padding: 10px 30px; border-radius: 6px; font-weight: bold; cursor: pointer;">دریافت</button>
+        </div>
+    </div>
+
+    <audio id="bgm" loop src="https://actions.google.com/sounds/v1/ambiences/wind_heavy.ogg"></audio>
+
+    <script>
+        function goFullscreen() {
+            const el = document.documentElement;
+            if (!document.fullscreenElement && el.requestFullscreen) {
+                el.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
+                }).catch(()=>{});
+            }
+        }
+
+        // راه‌اندازی دنیای سه‌بعدی با Three.js
+        let scene, camera, renderer, characterGroup, leftArm, rightArm, hairMesh, armorMesh, eyeLeft, eyeRight, particles;
+        let isDragging = false, prevX = 0;
+
+        function init3D() {
+            const container = document.getElementById('canvas-3d');
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x070b19, 0.045);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+            camera.position.set(0, 1.8, 5.5);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            container.appendChild(renderer.domElement);
+
+            // نورپردازی سینمایی کاخ
+            const ambientLight = new THREE.AmbientLight(0x405080, 1.5);
+            scene.add(ambientLight);
+
+            const goldSpot = new THREE.SpotLight(0xffb703, 3.5);
+            goldSpot.position.set(3, 6, 4);
+            goldSpot.castShadow = true;
+            scene.add(goldSpot);
+
+            const rimLight = new THREE.PointLight(0x38bdf8, 2.5, 15);
+            rimLight.position.set(-3, 3, -3);
+            scene.add(rimLight);
+
+            // زمین سنگی کاخ امپراتوری
+            const floorGeo = new THREE.CylinderGeometry(6, 6, 0.3, 32);
+            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.7, roughness: 0.2 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.y = -0.15;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // حلقه طلایی نورانی زیر پای کاراکتر
+            const ringGeo = new THREE.RingGeometry(1.1, 1.2, 64);
+            const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
+            const ring = new THREE.Mesh(ringGeo, ringMat);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = 0.01;
+            scene.add(ring);
+
+            // ستون‌های باستانی کاخ در پس‌زمینه
+            const pillarGeo = new THREE.CylinderGeometry(0.35, 0.4, 7, 16);
+            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
+            [[-4, -4], [4, -4], [-5.5, -1.5], [5.5, -1.5]].forEach(pos => {
+                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+                pillar.position.set(pos[0], 3.5, pos[1]);
+                scene.add(pillar);
+            });
+
+            // ساخت کاراکتر سه‌بعدی
+            characterGroup = new THREE.Group();
+
+            // زره و بدن
+            const armorGeo = new THREE.CylinderGeometry(0.38, 0.55, 1.5, 16);
+            const armorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
+            armorMesh = new THREE.Mesh(armorGeo, armorMat);
+            armorMesh.position.y = 1.0;
+            armorMesh.castShadow = true;
+            characterGroup.add(armorMesh);
+
+            // سر
+            const headGeo = new THREE.SphereGeometry(0.34, 32, 32);
+            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffd8be, roughness: 0.5 });
+            const head = new THREE.Mesh(headGeo, skinMat);
+            head.position.y = 2.05;
+            characterGroup.add(head);
+
+            // موها
+            const hairGeo = new THREE.SphereGeometry(0.37, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.65);
+            const hairMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
+            hairMesh = new THREE.Mesh(hairGeo, hairMat);
+            hairMesh.position.y = 2.08;
+            hairMesh.rotation.x = -0.2;
+            characterGroup.add(hairMesh);
+
+            // تاج سلطنتی
+            const crownGeo = new THREE.TorusGeometry(0.22, 0.04, 8, 24);
+            const crownMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 });
+            const crown = new THREE.Mesh(crownGeo, crownMat);
+            crown.position.y = 2.4;
+            crown.rotation.x = Math.PI / 2;
+            characterGroup.add(crown);
+
+            // چشم‌های درخشان
+            const eyeGeo = new THREE.SphereGeometry(0.045, 16, 16);
+            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
+            eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeLeft.position.set(-0.12, 2.05, 0.31);
+            eyeRight = new THREE.Mesh(eyeGeo, eyeMat);
+            eyeRight.position.set(0.12, 2.05, 0.31);
+            characterGroup.add(eyeLeft, eyeRight);
+
+            // دست‌ها برای انیمیشن سلام و حرکت
+            const armGeo = new THREE.CylinderGeometry(0.09, 0.08, 0.85, 12);
+            leftArm = new THREE.Mesh(armGeo, skinMat);
+            leftArm.position.set(-0.55, 1.35, 0);
+            leftArm.rotation.z = 0.25;
+
+            rightArm = new THREE.Mesh(armGeo, skinMat);
+            rightArm.position.set(0.55, 1.45, 0.1);
+            rightArm.rotation.z = -2.3; // دست بالا برای سلام کردن
+
+            characterGroup.add(leftArm, rightArm);
+            scene.add(characterGroup);
+
+            // ذرات جادویی نورانی در هوا
+            const partGeo = new THREE.BufferGeometry();
+            const partCount = 200;
+            const posArray = new Float32Array(partCount * 3);
+            for(let i = 0; i < partCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 14;
+            partGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const partMat = new THREE.PointsMaterial({ size: 0.06, color: 0xfef08a });
+            particles = new THREE.Points(partGeo, partMat);
+            scene.add(particles);
+
+            // کنترل چرخش کاراکتر با لمس یا موس
+            window.addEventListener('pointerdown', e => { isDragging = true; prevX = e.clientX; });
+            window.addEventListener('pointerup', () => isDragging = false);
+            window.addEventListener('pointermove', e => {
+                if (!isDragging) return;
+                const delta = e.clientX - prevX;
+                characterGroup.rotation.y += delta * 0.01;
+                prevX = e.clientX;
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            animate3D();
+        }
+
+        let clock = new THREE.Clock();
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            const t = clock.getElapsedTime();
+
+            // انیمیشن نفس کشیدن و دست تکان دادن کاراکتر
+            characterGroup.position.y = Math.sin(t * 2) * 0.04;
+            rightArm.rotation.z = -2.3 + Math.sin(t * 5) * 0.25;
+            particles.rotation.y = t * 0.05;
+
+            renderer.render(scene, camera);
+        }
+
+        // پالت‌های رنگی شخصی‌سازی
+        const colors = {
+            eyes: ['#f59e0b', '#ef4444', '#38bdf8', '#10b981'],
+            hair: ['#0f172a', '#e2e8f0', '#991b1b', '#ca8a04'],
+            armor: ['#1e293b', '#4c1d95', '#7f1d1d', '#064e3b']
+        };
+
+        function setupSwatches() {
+            const build = (id, list, type) => {
+                const el = document.getElementById(id);
+                el.innerHTML = list.map((c, idx) => `
+                    <div class="swatch-btn ${idx === 0 ? 'active' : ''}" style="background:${c}" onclick="applyColor('${type}', '${c}', this)"></div>
+                `).join('');
+            };
+            build('eye-swatches', colors.eyes, 'eyes');
+            build('hair-swatches', colors.hair, 'hair');
+            build('armor-swatches', colors.armor, 'armor');
+        }
+
+        function applyColor(type, hex, btn) {
+            btn.parentElement.querySelectorAll('.swatch-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (type === 'eyes') {
+                eyeLeft.material.color.set(hex);
+                eyeRight.material.color.set(hex);
+            } else if (type === 'hair') {
+                hairMesh.material.color.set(hex);
+            } else if (type === 'armor') {
+                armorMesh.material.color.set(hex);
+            }
+        }
+
+        function openReward() {
+            document.getElementById('modal-reward').style.display = 'flex';
+            const goldEl = document.getElementById('gold-count');
+            goldEl.innerText = (parseInt(goldEl.innerText.replace(/,/g, '')) + 500).toLocaleString();
+        }
+        function closeReward() { document.getElementById('modal-reward').style.display = 'none'; }
+
+        // ترتیب اجرای بازی: آپدیت -> ویدیو تله‌پورت -> لابی سه‌بعدی
+        window.onload = () => {
+            init3D();
+            setupSwatches();
+
+            let p = 0;
+            const fill = document.getElementById('bar-fill');
+            const top = document.getElementById('top-line');
+            const msg = document.getElementById('boot-msg');
+
+            const timer = setInterval(() => {
+                p += 5;
+                fill.style.width = p + '%';
+                top.style.width = p + '%';
+                if (p === 35) msg.innerText = 'در حال دریافت منابع و آپدیت‌های جدید...';
+                if (p === 75) msg.innerText = 'ساخت دنیای سه‌بعدی اوروریا...';
+                if (p >= 100) {
+                    clearInterval(timer);
+                    document.getElementById('boot-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('boot-screen').style.display = 'none';
+                        const tp = document.getElementById('teleport-scene');
+                        const vid = document.getElementById('teleport-video');
+                        const bgm = document.getElementById('bgm');
+                        tp.style.display = 'flex';
+                        bgm.volume = 0.35;
+                        bgm.play().catch(()=>{});
+                        vid.play().catch(()=>{});
+
+                        setTimeout(() => {
+                            tp.style.display = 'none';
+                            document.getElementById('lobby-hud').style.display = 'flex';
+                        }, 3500);
+                    }, 700);
+                }
+            }, 90);
+        };
+    </script>
+</body>
+</html>
