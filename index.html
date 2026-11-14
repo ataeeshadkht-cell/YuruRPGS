@@ -3,442 +3,369 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AURORIA 3D - Imperial Edition</title>
-    <!-- لود موتور گرافیکی سه‌بعدی Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <title>Auroria - Imperial Edition</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; font-family: 'Segoe UI', Tahoma, sans-serif; }
-        body, html { width: 100%; height: 100%; background: #030408; color: #fff; overflow: hidden; }
+        body, html { width: 100%; height: 100%; background: #050508; color: #fff; overflow: hidden; }
 
-        /* اخطار چرخش گوشی به حالت افقی */
+        /* راهنمای چرخش افقی */
         #rotate-warning {
             position: fixed; inset: 0; background: #05050a; z-index: 99999;
             display: none; flex-direction: column; justify-content: center; align-items: center; text-align: center;
         }
         .phone-anim {
-            width: 50px; height: 95px; border: 3px solid #f59e0b; border-radius: 10px;
-            margin-bottom: 20px; animation: rot 2s infinite ease-in-out;
+            width: 50px; height: 95px; border: 3px solid #00f0ff; border-radius: 10px;
+            margin-bottom: 20px; animation: rot 2s infinite ease-in-out; box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
         }
         @keyframes rot { 0%, 20% { transform: rotate(0deg); } 50%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
         @media screen and (orientation: portrait) { #rotate-warning { display: flex !important; } }
 
-        /* صفحه لودینگ و آپدیت سینمایی */
-        #boot-screen {
-            position: fixed; inset: 0; background: radial-gradient(circle at center, #111625 0%, #030408 100%);
-            z-index: 9000; display: flex; flex-direction: column; justify-content: center; align-items: center;
+        /* بارگذاری و نوار خطی */
+        #loader-screen {
+            position: fixed; inset: 0; background: radial-gradient(circle at center, #140b29 0%, #050508 100%);
+            z-index: 9999; display: flex; flex-direction: column; justify-content: center; align-items: center;
             transition: opacity 0.8s ease;
         }
-        .top-line { position: fixed; top: 0; left: 0; height: 3px; width: 0%; background: #f59e0b; box-shadow: 0 0 15px #f59e0b; transition: width 0.2s; }
-        .game-logo { font-size: 36px; font-weight: 900; letter-spacing: 8px; color: #f59e0b; text-shadow: 0 0 25px rgba(245, 158, 11, 0.6); margin-bottom: 25px; }
-        .bar-wrap { width: 340px; height: 4px; background: rgba(255,255,255,0.1); border-radius: 2px; overflow: hidden; }
-        .bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #f59e0b, #fef08a); transition: width 0.2s; }
-        .boot-msg { margin-top: 12px; font-size: 12px; color: #94a3b8; letter-spacing: 1px; }
-
-        /* ویدیوی انتقال تله‌پورت */
-        #teleport-scene {
-            position: fixed; inset: 0; background: #000; z-index: 8000; display: none;
-            justify-content: center; align-items: center;
+        .top-line {
+            position: fixed; top: 0; left: 0; height: 4px; width: 0%;
+            background: linear-gradient(90deg, #8a2be2, #00f0ff, #ff007f);
+            transition: width 0.2s ease; box-shadow: 0 0 15px #00f0ff;
         }
-        #teleport-video { width: 100%; height: 100%; object-fit: cover; }
-
-        /* بوم سه‌بعدی تمام صفحه */
-        #canvas-3d { position: fixed; inset: 0; z-index: 1; }
-
-        /* رابط کاربری لابی روی صحنه سه‌بعدی (HUD) */
-        #lobby-hud {
-            position: fixed; inset: 0; z-index: 10; display: none; pointer-events: none;
-            padding: 15px 25px; flex-direction: column; justify-content: space-between;
+        .lotus-loader {
+            width: 110px; height: 110px; margin-bottom: 20px;
+            animation: lotusBloom 2.5s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 20px rgba(0, 240, 255, 0.6));
         }
-        .interactive { pointer-events: auto; }
-
-        /* نوار بالا شبیه بازی‌های بزرگ */
-        .hud-top { display: flex; justify-content: space-between; align-items: center; }
-        .profile-box {
-            display: flex; align-items: center; gap: 12px;
-            background: linear-gradient(90deg, rgba(15,23,42,0.85), rgba(15,23,42,0.3));
-            border-right: 3px solid #f59e0b; padding: 6px 18px; border-radius: 4px; backdrop-filter: blur(8px);
+        @keyframes lotusBloom {
+            0% { transform: scale(0.85) rotate(-5deg); filter: drop-shadow(0 0 10px #8a2be2); }
+            100% { transform: scale(1.1) rotate(5deg); filter: drop-shadow(0 0 30px #00f0ff); }
         }
-        .avatar-circle { width: 38px; height: 38px; border-radius: 50%; background: #f59e0b; display: flex; align-items: center; justify-content: center; font-weight: bold; color: #000; font-size: 16px; }
-        .currency-bar { display: flex; gap: 15px; }
-        .curr-item {
-            background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(245, 158, 11, 0.3);
-            padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #fef08a;
-            display: flex; align-items: center; gap: 6px; backdrop-filter: blur(6px);
+        .progress-bar { width: 300px; height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+        .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, #8a2be2, #00f0ff); transition: width 0.2s ease; }
+        .status-text { margin-top: 15px; font-size: 13px; color: #cbd5e1; letter-spacing: 1px; }
+
+        /* ویدیوی سینمایی */
+        #video-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: none; }
+        #cinematic-video { width: 100%; height: 100%; object-fit: cover; }
+
+        /* لابی اصلی */
+        #main-lobby {
+            position: fixed; inset: 0; display: none; grid-template-columns: 1fr 330px;
+            background: url('https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?q=80&w=1920&auto=format&fit=crop') no-repeat center center;
+            background-size: cover;
+        }
+        #main-lobby::before {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(circle at 35% 50%, rgba(20, 10, 40, 0.35) 0%, rgba(5, 5, 12, 0.88) 100%);
         }
 
-        /* پنل شخصی‌سازی شیشه‌ای سمت راست */
-        .hud-middle { display: flex; justify-content: space-between; align-items: center; flex: 1; }
-        .custom-panel {
-            width: 240px; background: rgba(10, 15, 28, 0.75); border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px; padding: 12px; backdrop-filter: blur(12px);
-            display: flex; flex-direction: column; gap: 12px;
+        /* کاراکتر انیمه‌ای */
+        .visual-showcase {
+            display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; height: 100%;
         }
-        .cat-title { font-size: 11px; color: #f59e0b; font-weight: bold; margin-bottom: 5px; }
-        .swatch-row { display: flex; gap: 8px; }
-        .swatch-btn {
-            width: 34px; height: 34px; border-radius: 8px; border: 2px solid rgba(255,255,255,0.2);
-            cursor: pointer; transition: 0.2s;
+        .magic-halo {
+            position: absolute; width: 320px; height: 320px; border-radius: 50%;
+            border: 2px dashed rgba(0, 240, 255, 0.35);
+            box-shadow: inset 0 0 40px rgba(138, 43, 226, 0.4), 0 0 40px rgba(0, 240, 255, 0.2);
+            animation: spinHalo 20s linear infinite; z-index: 1;
         }
-        .swatch-btn.active { border-color: #f59e0b; transform: scale(1.1); box-shadow: 0 0 12px rgba(245,158,11,0.6); }
+        @keyframes spinHalo { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* نوار پایین (جوایز و دکمه ورود) */
-        .hud-bottom { display: flex; justify-content: space-between; align-items: flex-end; }
-        .crate-card {
-            background: linear-gradient(135deg, rgba(30,41,59,0.9), rgba(15,23,42,0.9));
-            border: 1px solid #f59e0b; padding: 10px 20px; border-radius: 10px;
-            display: flex; align-items: center; gap: 10px; cursor: pointer;
-            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3); transition: 0.2s;
+        .char-render { height: 84vh; width: auto; max-width: 300px; z-index: 2; }
+        @keyframes idleMotion {
+            0%, 100% { transform: translateY(0) scale(1); }
+            50% { transform: translateY(-7px) scale(1.015); }
         }
-        .crate-card:hover { transform: translateY(-3px); box-shadow: 0 0 30px rgba(245, 158, 11, 0.6); }
+        .animate-body { animation: idleMotion 3.5s ease-in-out infinite; transform-origin: bottom; }
+        
+        .power-glow-sun { animation: sunGlow 3s ease-in-out infinite; }
+        @keyframes sunGlow { 0%, 100% { filter: drop-shadow(0 0 15px #ff4500) drop-shadow(0 0 30px #ff8c00); } 50% { filter: drop-shadow(0 0 30px #ff0000) drop-shadow(0 0 50px #ffd700); } }
 
-        .play-btn {
-            background: linear-gradient(135deg, #f59e0b, #d97706); color: #000;
-            border: none; padding: 14px 48px; font-size: 18px; font-weight: 900; letter-spacing: 2px;
-            border-radius: 6px; cursor: pointer; box-shadow: 0 0 30px rgba(245, 158, 11, 0.6);
-            clip-path: polygon(10% 0, 100% 0, 90% 100%, 0% 100%); transition: 0.2s;
+        .power-glow-lightning { animation: lightGlow 3s ease-in-out infinite; }
+        @keyframes lightGlow { 0%, 100% { filter: drop-shadow(0 0 15px #00f0ff) drop-shadow(0 0 30px #1e90ff); } 50% { filter: drop-shadow(0 0 30px #00ffff) drop-shadow(0 0 50px #ffffff); } }
+
+        .power-glow-dark { animation: darkGlow 3s ease-in-out infinite; }
+        @keyframes darkGlow { 0%, 100% { filter: drop-shadow(0 0 15px #8a2be2) drop-shadow(0 0 30px #4b0082); } 50% { filter: drop-shadow(0 0 30px #ff007f) drop-shadow(0 0 50px #9400d3); } }
+
+        /* پنل شخصی‌سازی */
+        .customization-dock {
+            background: rgba(12, 10, 24, 0.92); border-right: 1px solid rgba(0, 240, 255, 0.3);
+            padding: 12px; display: flex; flex-direction: column; gap: 10px; backdrop-filter: blur(15px);
+            z-index: 10; box-shadow: -15px 0 40px rgba(0,0,0,0.8); overflow-y: auto; height: 100%;
         }
-        .play-btn:active { transform: scale(0.95); }
+        .section-header { font-size: 11px; font-weight: bold; color: #00f0ff; margin-bottom: 4px; border-bottom: 1px solid rgba(0,240,255,0.2); padding-bottom: 2px; }
+        .options-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
+        .opt-card {
+            background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 5px; padding: 6px; display: flex; align-items: center;
+            gap: 6px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .opt-card:hover { border-color: rgba(0, 240, 255, 0.6); background: rgba(0, 240, 255, 0.08); }
+        .opt-card.active { border-color: #00f0ff; background: rgba(0, 240, 255, 0.2); box-shadow: 0 0 10px rgba(0, 240, 255, 0.3); }
+        .swatch { width: 18px; height: 18px; border-radius: 50%; border: 1.2px solid #fff; flex-shrink: 0; }
 
-        /* پنجره جایزه */
-        #modal-reward {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 100;
-            display: none; justify-content: center; align-items: center; backdrop-filter: blur(8px);
+        /* منوی دسترسی سریع (میدان جنگ، خوراک، خاطرات، هدیه) */
+        .action-dock { position: absolute; bottom: 15px; left: 20px; z-index: 10; display: flex; gap: 8px; }
+        .action-btn {
+            background: linear-gradient(135deg, #2d135e, #8a2be2); border: 1px solid #00f0ff;
+            color: #fff; padding: 7px 14px; border-radius: 20px; font-size: 11px; font-weight: bold; cursor: pointer;
+            transition: all 0.25s ease; display: flex; align-items: center; gap: 5px;
+            box-shadow: 0 0 15px rgba(138, 43, 226, 0.6);
+        }
+        .action-btn:hover { transform: scale(1.05); box-shadow: 0 0 25px rgba(0, 240, 255, 0.8); }
+
+        .modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; z-index: 10000; backdrop-filter: blur(10px);
         }
         .modal-box {
-            background: linear-gradient(180deg, #1e293b, #0f172a); border: 2px solid #f59e0b;
-            padding: 30px 40px; border-radius: 16px; text-align: center; max-width: 360px;
-            box-shadow: 0 0 50px rgba(245, 158, 11, 0.5);
+            background: linear-gradient(180deg, #180b30, #0a0414); border: 2px solid #00f0ff;
+            padding: 24px 30px; border-radius: 16px; text-align: right; width: 450px; max-width: 90%;
+            box-shadow: 0 0 50px rgba(0, 240, 255, 0.5); animation: popIn 0.3s ease;
         }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
-<body onclick="goFullscreen()">
+<body onclick="requestLandscape()">
 
     <div id="rotate-warning">
         <div class="phone-anim"></div>
-        <h3 style="color: #f59e0b;">گوشی را افقی بچرخانید</h3>
+        <h3 style="color: #00f0ff; margin-bottom: 6px;">گوشی را افقی بچرخانید</h3>
+        <p style="color: #94a3b8; font-size: 12px;">برای اجرای بازی، صفحه را به حالت افقی درآورید.</p>
     </div>
 
-    <!-- مرحله ۱: بوت و آپدیت -->
-    <div id="boot-screen">
+    <!-- بارگذاری -->
+    <div id="loader-screen">
         <div class="top-line" id="top-line"></div>
-        <div class="game-logo">AURORIA</div>
-        <div class="bar-wrap"><div class="bar-fill" id="bar-fill"></div></div>
-        <div class="boot-msg" id="boot-msg">در حال بارگذاری موتور سه‌بعدی...</div>
+        <svg class="lotus-loader" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50,15 C62,38 62,62 50,85 C38,62 38,38 50,15 Z" fill="#00f0ff" opacity="0.9"/>
+            <path d="M50,25 C72,42 75,68 50,85 C25,68 28,42 50,25 Z" fill="#8a2be2" opacity="0.75"/>
+            <path d="M50,35 C85,48 85,75 50,85 C15,75 15,48 50,35 Z" fill="#ff007f" opacity="0.55"/>
+            <circle cx="50" cy="60" r="6" fill="#fef08a"/>
+        </svg>
+        <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+        <div class="status-text" id="status">در حال دریافت موسیقی، سلاح‌ها و هدیه‌ها...</div>
     </div>
 
-    <!-- مرحله ۲: ویدیو تله‌پورت -->
-    <div id="teleport-scene">
-        <video id="teleport-video" playsinline muted>
+    <!-- ویدیوی سینمایی -->
+    <div id="video-screen">
+        <video id="cinematic-video" playsinline muted>
             <source src="https://assets.mixkit.co/videos/preview/mixkit-star-field-in-space-4396-large.mp4" type="video/mp4">
         </video>
     </div>
 
-    <!-- صحنه گرافیکی سه‌بعدی -->
-    <div id="canvas-3d"></div>
+    <!-- لابی اصلی -->
+    <div id="main-lobby">
+        <div class="visual-showcase">
+            <div class="magic-halo"></div>
+            <svg id="char-svg" class="char-render animate-body power-glow-sun" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg">
+                <path d="M42,285 Q58,158 84,148 L116,148 Q142,158 158,285 Z" id="outfit-path" fill="#2d135e" stroke="#00f0ff" stroke-width="2"/>
+                <path d="M68,158 Q100,182 132,158 L142,285 L58,285 Z" fill="#ffffff" opacity="0.12"/>
+                <path d="M76,175 Q100,185 124,175" stroke="#ffd700" stroke-width="3" fill="none"/>
+                
+                <rect x="93" y="112" width="14" height="20" rx="5" fill="#ffe0cc"/>
+                <path d="M72,82 C72,58 128,58 128,82 C128,106 112,118 100,120 C88,118 72,106 72,82 Z" fill="#ffe6d5"/>
+                
+                <path d="M58,68 C48,12 152,12 142,68 C134,145 154,230 134,292 C122,240 132,160 122,125 C112,160 112,240 100,292 C88,240 88,160 78,125 C68,160 78,240 66,292 C46,230 66,145 58,68 Z" id="hair-path" fill="#8a2be2"/>
+                <path d="M68,68 Q85,92 95,72 Q100,95 108,72 Q118,92 132,68 Q100,45 68,68 Z" id="hair-front" fill="#8a2be2"/>
 
-    <!-- رابط کاربری لابی -->
-    <div id="lobby-hud">
-        <div class="hud-top">
-            <div class="profile-box interactive">
-                <div class="avatar-circle">Y</div>
-                <div>
-                    <div style="font-size: 14px; font-weight: bold;">Yuyu</div>
-                    <div style="font-size: 10px; color: #f59e0b;">LV. 1 • قلمرو امپراتوری</div>
-                </div>
-            </div>
-            <div class="currency-bar interactive">
-                <div class="curr-item">🪙 <span id="gold-count">12,500</span></div>
-                <div class="curr-item">💎 <span id="gem-count">450</span></div>
+                <ellipse cx="85" cy="88" rx="7.5" ry="4.5" fill="#fff"/>
+                <circle cx="85" cy="88" r="3.5" id="eye-color" fill="#00f0ff"/>
+                <circle cx="83.5" cy="86.5" r="1.2" fill="#fff"/>
+                
+                <ellipse cx="115" cy="88" rx="7.5" ry="4.5" fill="#fff"/>
+                <circle cx="115" cy="88" r="3.5" id="eye-color-r" fill="#00f0ff"/>
+                <circle cx="113.5" cy="86.5" r="1.2" fill="#fff"/>
+
+                <path d="M96,107 Q100,110 104,107" stroke="#e07a8c" stroke-width="1.5" fill="none"/>
+                
+                <polygon points="100,40 105,50 100,60 95,50" fill="#ffd700" filter="drop-shadow(0 0 6px #ffd700)"/>
+                <path d="M78,56 Q100,66 122,56" stroke="#ffd700" stroke-width="1.8" fill="none"/>
+            </svg>
+            
+            <div class="action-dock">
+                <button class="action-btn" onclick="openModal('war-modal')">⚔️ میدان جنگ</button>
+                <button class="action-btn" onclick="openModal('rest-modal')">🍲 خوراک و استراحت</button>
+                <button class="action-btn" onclick="openModal('gift-modal')">🎁 صندوق هدایا</button>
+                <button class="action-btn" onclick="openModal('journal-modal')">📖 خاطرات</button>
             </div>
         </div>
 
-        <div class="hud-middle">
-            <!-- پنل تغییر رنگ سه‌بعدی کاراکتر -->
-            <div class="custom-panel interactive">
-                <div>
-                    <div class="cat-title">رنگ لنز چشم</div>
-                    <div class="swatch-row" id="eye-swatches"></div>
-                </div>
-                <div>
-                    <div class="cat-title">رنگ مو</div>
-                    <div class="swatch-row" id="hair-swatches"></div>
-                </div>
-                <div>
-                    <div class="cat-title">زره و پوشش سلطنتی</div>
-                    <div class="swatch-row" id="armor-swatches"></div>
-                </div>
-                <div style="font-size: 10px; color: #94a3b8; text-align: center; margin-top: 4px;">
-                    برای چرخاندن کاراکتر، صفحه را بکشید
-                </div>
+        <!-- پنل شخصی‌سازی -->
+        <div class="customization-dock">
+            <div>
+                <div class="section-header">🔥 ست‌های قدرت و سلاح</div>
+                <div class="options-grid" id="power-options"></div>
             </div>
-            <div></div>
-        </div>
-
-        <div class="hud-bottom">
-            <div class="crate-card interactive" onclick="openReward()">
-                <span style="font-size: 24px;">🎁</span>
-                <div>
-                    <div style="font-size: 12px; font-weight: bold; color: #f59e0b;">صندوق گنج سلطنتی</div>
-                    <div style="font-size: 10px; color: #cbd5e1;">دریافت هدیه روزانه</div>
-                </div>
+            <div>
+                <div class="section-header">رنگ لنز چشم</div>
+                <div class="options-grid" id="eye-options"></div>
             </div>
-
-            <button class="play-btn interactive" onclick="alert('در حال آماده‌سازی نقشه نبرد با شیاطین...')">START</button>
+            <div>
+                <div class="section-header">رنگ مو</div>
+                <div class="options-grid" id="hair-options"></div>
+            </div>
+            <div>
+                <div class="section-header">لباس سلطنتی</div>
+                <div class="options-grid" id="outfit-options"></div>
+            </div>
         </div>
     </div>
 
-    <!-- پنجره دریافت جایزه -->
-    <div id="modal-reward" onclick="closeReward()">
+    <!-- مودال‌های بخش‌های مختلف -->
+    <div id="war-modal" class="modal-overlay" onclick="closeModal('war-modal')">
         <div class="modal-box" onclick="event.stopPropagation()">
-            <div style="font-size: 48px; margin-bottom: 10px;">👑</div>
-            <h3 style="color: #f59e0b; margin-bottom: 8px;">پاداش امپراتوری!</h3>
-            <p style="font-size: 13px; color: #cbd5e1; margin-bottom: 20px;">۵۰۰ سکه طلا و زره درخشان به حساب شما اضافه شد.</p>
-            <button onclick="closeReward()" style="background: #f59e0b; border: none; padding: 10px 30px; border-radius: 6px; font-weight: bold; cursor: pointer;">دریافت</button>
+            <h3 style="color: #00f0ff; margin-bottom: 10px;">⚔️ میدان جنگ شیاطین ناشناس</h3>
+            <p style="font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 15px;">شیاطین در لباس مبدل انسان‌ها وارد کاخ شده‌اند. با سلاح‌های افسانه‌ای و ست قدرت خود آماده نبرد و پاکسازی قلمرو شوید.</p>
+            <button onclick="closeModal('war-modal')" style="background: #8a2be2; border: none; padding: 8px 20px; border-radius: 12px; color: #fff; cursor: pointer;">بازگشت</button>
         </div>
     </div>
 
-    <audio id="bgm" loop src="https://actions.google.com/sounds/v1/ambiences/wind_heavy.ogg"></audio>
+    <div id="rest-modal" class="modal-overlay" onclick="closeModal('rest-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 style="color: #00f0ff; margin-bottom: 10px;">🍲 استراحتگاه، خوراک و داروخانه</h3>
+            <p style="font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 15px;">محل خواب قهرمان، بازیابی انرژی، طبخ غذاهای سنتی غیرترش و داروهای بازیابی توان جسمی.</p>
+            <button onclick="closeModal('rest-modal')" style="background: #8a2be2; border: none; padding: 8px 20px; border-radius: 12px; color: #fff; cursor: pointer;">بستن</button>
+        </div>
+    </div>
+
+    <div id="gift-modal" class="modal-overlay" onclick="closeModal('gift-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 style="color: #00f0ff; margin-bottom: 10px;">🎁 صندوق هدایای امپراتوری</h3>
+            <p style="font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 15px;">تبریک! هدایای ویژه شامل بال‌های نورانی، جواهرات و تجهیزات نبرد به شما اهدا شد.</p>
+            <button onclick="closeModal('gift-modal')" style="background: #8a2be2; border: none; padding: 8px 20px; border-radius: 12px; color: #fff; cursor: pointer;">دریافت هدیه</button>
+        </div>
+    </div>
+
+    <div id="journal-modal" class="modal-overlay" onclick="closeModal('journal-modal')">
+        <div class="modal-box" onclick="event.stopPropagation()">
+            <h3 style="color: #00f0ff; margin-bottom: 10px;">📖 دفترچه خاطرات اوروریا</h3>
+            <p style="font-size: 13px; line-height: 1.6; color: #cbd5e1; margin-bottom: 15px;">«امروز سفرم به قصر آغاز شد، سلاح و ست قدرت خود را انتخاب کردم تا با شیاطین مبدل بجنگم...»</p>
+            <button onclick="closeModal('journal-modal')" style="background: #8a2be2; border: none; padding: 8px 20px; border-radius: 12px; color: #fff; cursor: pointer;">بستن دفترچه</button>
+        </div>
+    </div>
+
+    <!-- آهنگ زمینه صوتی -->
+    <audio id="bg-music" loop src="https://actions.google.com/sounds/v1/ambiences/wind_heavy.ogg"></audio>
 
     <script>
-        function goFullscreen() {
-            const el = document.documentElement;
-            if (!document.fullscreenElement && el.requestFullscreen) {
-                el.requestFullscreen().then(() => {
-                    if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(()=>{});
-                }).catch(()=>{});
+        function requestLandscape() {
+            const elem = document.documentElement;
+            if (!document.fullscreenElement && elem.requestFullscreen) {
+                elem.requestFullscreen().then(() => {
+                    if (screen.orientation && screen.orientation.lock) {
+                        screen.orientation.lock('landscape').catch(() => {});
+                    }
+                }).catch(() => {});
             }
         }
 
-        // راه‌اندازی دنیای سه‌بعدی با Three.js
-        let scene, camera, renderer, characterGroup, leftArm, rightArm, hairMesh, armorMesh, eyeLeft, eyeRight, particles;
-        let isDragging = false, prevX = 0;
+        const powerSets = [
+            {name: 'تنفس خورشید و شمشیر', glowClass: 'power-glow-sun', color: '#ff4500'},
+            {name: 'صاعقه الهی', glowClass: 'power-glow-lightning', color: '#00f0ff'},
+            {name: 'جادوی تاریک', glowClass: 'power-glow-dark', color: '#8a2be2'}
+        ];
 
-        function init3D() {
-            const container = document.getElementById('canvas-3d');
-            scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x070b19, 0.045);
+        const eyeColors = [
+            {name: 'آسمانی', color: '#00f0ff'},
+            {name: 'یاقوتی', color: '#ff0055'},
+            {name: 'زمردی', color: '#00ff66'},
+            {name: 'طلایی', color: '#ffd700'}
+        ];
+        const hairStyles = [ 
+            {name: 'بنفش عرفانی', color: '#8a2be2'},
+            {name: 'نقره‌ای مهتابی', color: '#e2e8f0'},
+            {name: 'سرخ آتشین', color: '#dc2626'},
+            {name: 'زمردی جنگل', color: '#10b981'}
+        ];
+        const outfits = [
+            {name: 'شهبانو', color: '#2d135e', trim: '#00f0ff'},
+            {name: 'سایه شب', color: '#111827', trim: '#a855f7'},
+            {name: 'شکوفه سرخ', color: '#7f1d1d', trim: '#ffd700'},
+            {name: 'یخی سلطنتی', color: '#0c4a6e', trim: '#38bdf8'}
+        ];
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.set(0, 1.8, 5.5);
+        let state = { power: 0, eye: 0, hair: 0, outfit: 0 };
 
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-            renderer.shadowMap.enabled = true;
-            container.appendChild(renderer.domElement);
+        window.onload = () => {
+            let progress = 0;
+            const prog = document.getElementById('prog');
+            const topLine = document.getElementById('top-line');
+            const status = document.getElementById('status');
 
-            // نورپردازی سینمایی کاخ
-            const ambientLight = new THREE.AmbientLight(0x405080, 1.5);
-            scene.add(ambientLight);
+            const interval = setInterval(() => {
+                progress += 4;
+                prog.style.width = progress + '%';
+                topLine.style.width = progress + '%';
 
-            const goldSpot = new THREE.SpotLight(0xffb703, 3.5);
-            goldSpot.position.set(3, 6, 4);
-            goldSpot.castShadow = true;
-            scene.add(goldSpot);
+                if(progress === 32) status.innerText = 'بارگذاری موسیقی و سلاح‌ها...';
+                if(progress === 68) status.innerText = 'آماده‌سازی لابی و صندوق هدایا...';
+                if(progress >= 100) {
+                    clearInterval(interval);
+                    document.getElementById('loader-screen').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('loader-screen').style.display = 'none';
+                        startCinematic();
+                    }, 800);
+                }
+            }, 100);
 
-            const rimLight = new THREE.PointLight(0x38bdf8, 2.5, 15);
-            rimLight.position.set(-3, 3, -3);
-            scene.add(rimLight);
-
-            // زمین سنگی کاخ امپراتوری
-            const floorGeo = new THREE.CylinderGeometry(6, 6, 0.3, 32);
-            const floorMat = new THREE.MeshStandardMaterial({ color: 0x111827, metalness: 0.7, roughness: 0.2 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.position.y = -0.15;
-            floor.receiveShadow = true;
-            scene.add(floor);
-
-            // حلقه طلایی نورانی زیر پای کاراکتر
-            const ringGeo = new THREE.RingGeometry(1.1, 1.2, 64);
-            const ringMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b, side: THREE.DoubleSide });
-            const ring = new THREE.Mesh(ringGeo, ringMat);
-            ring.rotation.x = -Math.PI / 2;
-            ring.position.y = 0.01;
-            scene.add(ring);
-
-            // ستون‌های باستانی کاخ در پس‌زمینه
-            const pillarGeo = new THREE.CylinderGeometry(0.35, 0.4, 7, 16);
-            const pillarMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, roughness: 0.6 });
-            [[-4, -4], [4, -4], [-5.5, -1.5], [5.5, -1.5]].forEach(pos => {
-                const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-                pillar.position.set(pos[0], 3.5, pos[1]);
-                scene.add(pillar);
-            });
-
-            // ساخت کاراکتر سه‌بعدی
-            characterGroup = new THREE.Group();
-
-            // زره و بدن
-            const armorGeo = new THREE.CylinderGeometry(0.38, 0.55, 1.5, 16);
-            const armorMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.6, roughness: 0.3 });
-            armorMesh = new THREE.Mesh(armorGeo, armorMat);
-            armorMesh.position.y = 1.0;
-            armorMesh.castShadow = true;
-            characterGroup.add(armorMesh);
-
-            // سر
-            const headGeo = new THREE.SphereGeometry(0.34, 32, 32);
-            const skinMat = new THREE.MeshStandardMaterial({ color: 0xffd8be, roughness: 0.5 });
-            const head = new THREE.Mesh(headGeo, skinMat);
-            head.position.y = 2.05;
-            characterGroup.add(head);
-
-            // موها
-            const hairGeo = new THREE.SphereGeometry(0.37, 32, 32, 0, Math.PI * 2, 0, Math.PI * 0.65);
-            const hairMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.4 });
-            hairMesh = new THREE.Mesh(hairGeo, hairMat);
-            hairMesh.position.y = 2.08;
-            hairMesh.rotation.x = -0.2;
-            characterGroup.add(hairMesh);
-
-            // تاج سلطنتی
-            const crownGeo = new THREE.TorusGeometry(0.22, 0.04, 8, 24);
-            const crownMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, metalness: 0.9, roughness: 0.1 });
-            const crown = new THREE.Mesh(crownGeo, crownMat);
-            crown.position.y = 2.4;
-            crown.rotation.x = Math.PI / 2;
-            characterGroup.add(crown);
-
-            // چشم‌های درخشان
-            const eyeGeo = new THREE.SphereGeometry(0.045, 16, 16);
-            const eyeMat = new THREE.MeshBasicMaterial({ color: 0xf59e0b });
-            eyeLeft = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeLeft.position.set(-0.12, 2.05, 0.31);
-            eyeRight = new THREE.Mesh(eyeGeo, eyeMat);
-            eyeRight.position.set(0.12, 2.05, 0.31);
-            characterGroup.add(eyeLeft, eyeRight);
-
-            // دست‌ها برای انیمیشن سلام و حرکت
-            const armGeo = new THREE.CylinderGeometry(0.09, 0.08, 0.85, 12);
-            leftArm = new THREE.Mesh(armGeo, skinMat);
-            leftArm.position.set(-0.55, 1.35, 0);
-            leftArm.rotation.z = 0.25;
-
-            rightArm = new THREE.Mesh(armGeo, skinMat);
-            rightArm.position.set(0.55, 1.45, 0.1);
-            rightArm.rotation.z = -2.3; // دست بالا برای سلام کردن
-
-            characterGroup.add(leftArm, rightArm);
-            scene.add(characterGroup);
-
-            // ذرات جادویی نورانی در هوا
-            const partGeo = new THREE.BufferGeometry();
-            const partCount = 200;
-            const posArray = new Float32Array(partCount * 3);
-            for(let i = 0; i < partCount * 3; i++) posArray[i] = (Math.random() - 0.5) * 14;
-            partGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-            const partMat = new THREE.PointsMaterial({ size: 0.06, color: 0xfef08a });
-            particles = new THREE.Points(partGeo, partMat);
-            scene.add(particles);
-
-            // کنترل چرخش کاراکتر با لمس یا موس
-            window.addEventListener('pointerdown', e => { isDragging = true; prevX = e.clientX; });
-            window.addEventListener('pointerup', () => isDragging = false);
-            window.addEventListener('pointermove', e => {
-                if (!isDragging) return;
-                const delta = e.clientX - prevX;
-                characterGroup.rotation.y += delta * 0.01;
-                prevX = e.clientX;
-            });
-
-            window.addEventListener('resize', () => {
-                camera.aspect = window.innerWidth / window.innerHeight;
-                camera.updateProjectionMatrix();
-                renderer.setSize(window.innerWidth, window.innerHeight);
-            });
-
-            animate3D();
-        }
-
-        let clock = new THREE.Clock();
-        function animate3D() {
-            requestAnimationFrame(animate3D);
-            const t = clock.getElapsedTime();
-
-            // انیمیشن نفس کشیدن و دست تکان دادن کاراکتر
-            characterGroup.position.y = Math.sin(t * 2) * 0.04;
-            rightArm.rotation.z = -2.3 + Math.sin(t * 5) * 0.25;
-            particles.rotation.y = t * 0.05;
-
-            renderer.render(scene, camera);
-        }
-
-        // پالت‌های رنگی شخصی‌سازی
-        const colors = {
-            eyes: ['#f59e0b', '#ef4444', '#38bdf8', '#10b981'],
-            hair: ['#0f172a', '#e2e8f0', '#991b1b', '#ca8a04'],
-            armor: ['#1e293b', '#4c1d95', '#7f1d1d', '#064e3b']
+            initBuilder();
         };
 
-        function setupSwatches() {
-            const build = (id, list, type) => {
-                const el = document.getElementById(id);
-                el.innerHTML = list.map((c, idx) => `
-                    <div class="swatch-btn ${idx === 0 ? 'active' : ''}" style="background:${c}" onclick="applyColor('${type}', '${c}', this)"></div>
+        function startCinematic() {
+            const vidScreen = document.getElementById('video-screen');
+            const vid = document.getElementById('cinematic-video');
+            const music = document.getElementById('bg-music');
+            vidScreen.style.display = 'block';
+            
+            music.volume = 0.4;
+            music.play().catch(() => {});
+            vid.play().catch(() => {});
+
+            setTimeout(() => {
+                vidScreen.style.display = 'none';
+                document.getElementById('main-lobby').style.display = 'grid';
+            }, 4000);
+        }
+
+        function initBuilder() {
+            const renderGrid = (id, list, key) => {
+                const container = document.getElementById(id);
+                container.innerHTML = list.map((item, index) => `
+                    <div class="opt-card ${state[key] === index ? 'active' : ''}" onclick="select('${key}', ${index})">
+                        <div class="swatch" style="background: ${item.color || item.trim};"></div>
+                        <span style="font-size: 11px;">${item.name}</span>
+                    </div>
                 `).join('');
             };
-            build('eye-swatches', colors.eyes, 'eyes');
-            build('hair-swatches', colors.hair, 'hair');
-            build('armor-swatches', colors.armor, 'armor');
+            renderGrid('power-options', powerSets, 'power');
+            renderGrid('eye-options', eyeColors, 'eye');
+            renderGrid('hair-options', hairStyles, 'hair');
+            renderGrid('outfit-options', outfits, 'outfit');
         }
 
-        function applyColor(type, hex, btn) {
-            btn.parentElement.querySelectorAll('.swatch-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            if (type === 'eyes') {
-                eyeLeft.material.color.set(hex);
-                eyeRight.material.color.set(hex);
-            } else if (type === 'hair') {
-                hairMesh.material.color.set(hex);
-            } else if (type === 'armor') {
-                armorMesh.material.color.set(hex);
-            }
+        function select(key, index) {
+            state[key] = index;
+            initBuilder();
+            updatePreview();
         }
 
-        function openReward() {
-            document.getElementById('modal-reward').style.display = 'flex';
-            const goldEl = document.getElementById('gold-count');
-            goldEl.innerText = (parseInt(goldEl.innerText.replace(/,/g, '')) + 500).toLocaleString();
+        function updatePreview() {
+            const svgElem = document.getElementById('char-svg');
+            svgElem.className = "char-render animate-body " + powerSets[state.power].glowClass;
+
+            document.getElementById('eye-color').setAttribute('fill', eyeColors[state.eye].color);
+            document.getElementById('eye-color-r').setAttribute('fill', eyeColors[state.eye].color);
+            document.getElementById('hair-path').setAttribute('fill', hairStyles[state.hair].color);
+            document.getElementById('hair-front').setAttribute('fill', hairStyles[state.hair].color);
+            const outfit = outfits[state.outfit];
+            document.getElementById('outfit-path').setAttribute('fill', outfit.color);
+            document.getElementById('outfit-path').setAttribute('stroke', outfit.trim);
         }
-        function closeReward() { document.getElementById('modal-reward').style.display = 'none'; }
 
-        // ترتیب اجرای بازی: آپدیت -> ویدیو تله‌پورت -> لابی سه‌بعدی
-        window.onload = () => {
-            init3D();
-            setupSwatches();
-
-            let p = 0;
-            const fill = document.getElementById('bar-fill');
-            const top = document.getElementById('top-line');
-            const msg = document.getElementById('boot-msg');
-
-            const timer = setInterval(() => {
-                p += 5;
-                fill.style.width = p + '%';
-                top.style.width = p + '%';
-                if (p === 35) msg.innerText = 'در حال دریافت منابع و آپدیت‌های جدید...';
-                if (p === 75) msg.innerText = 'ساخت دنیای سه‌بعدی اوروریا...';
-                if (p >= 100) {
-                    clearInterval(timer);
-                    document.getElementById('boot-screen').style.opacity = '0';
-                    setTimeout(() => {
-                        document.getElementById('boot-screen').style.display = 'none';
-                        const tp = document.getElementById('teleport-scene');
-                        const vid = document.getElementById('teleport-video');
-                        const bgm = document.getElementById('bgm');
-                        tp.style.display = 'flex';
-                        bgm.volume = 0.35;
-                        bgm.play().catch(()=>{});
-                        vid.play().catch(()=>{});
-
-                        setTimeout(() => {
-                            tp.style.display = 'none';
-                            document.getElementById('lobby-hud').style.display = 'flex';
-                        }, 3500);
-                    }, 700);
-                }
-            }, 90);
-        };
+        function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
     </script>
 </body>
 </html>
